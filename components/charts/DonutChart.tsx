@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { Chart, ChartConfiguration } from "chart.js";
 import type { CategoryStat } from "@/types";
 
 interface DonutChartProps {
@@ -19,7 +20,8 @@ export function DonutChart({
   height = 180,
 }: DonutChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useRef<unknown>(null);
+  // Use the imported Chart type — available at the module level, no dynamic-import scoping issues
+  const chartRef  = useRef<Chart | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current || !data.length) return;
@@ -28,15 +30,15 @@ export function DonutChart({
       ChartJS.register(...registerables);
 
       if (chartRef.current) {
-        (chartRef.current as import("chart.js").Chart).destroy();
+        chartRef.current.destroy();
+        chartRef.current = null;
       }
 
       const ctx = canvasRef.current!.getContext("2d")!;
 
-      // Center text plugin
       const centerTextPlugin = {
         id: "centerText",
-        afterDraw(chart: import("chart.js").Chart) {
+        afterDraw(chart: Chart) {
           const { ctx: c, chartArea } = chart;
           const cx = (chartArea.left + chartArea.right) / 2;
           const cy = (chartArea.top + chartArea.bottom) / 2;
@@ -53,7 +55,7 @@ export function DonutChart({
         },
       };
 
-      chartRef.current = new ChartJS(ctx, {
+      const config: ChartConfiguration<"doughnut"> = {
         type: "doughnut",
         data: {
           labels: data.map((d) => d.label),
@@ -82,18 +84,23 @@ export function DonutChart({
               cornerRadius: 8,
               callbacks: {
                 label: (item) =>
-                  ` ${symbol}${Number(item.raw).toLocaleString("en-IN")} (${data[item.dataIndex].percentage}%)`,
+                  ` ${symbol}${Number(item.raw).toLocaleString("en-IN")} (${
+                    data[item.dataIndex].percentage
+                  }%)`,
               },
             },
           },
         },
         plugins: totalValue ? [centerTextPlugin] : [],
-      });
+      };
+
+      chartRef.current = new ChartJS(ctx, config) as Chart;
     });
 
     return () => {
+      // chartRef.current is typed as Chart | null — no ChartJS name needed here
       if (chartRef.current) {
-        (chartRef.current as import("chart.js").Chart).destroy();
+        chartRef.current.destroy();
         chartRef.current = null;
       }
     };
