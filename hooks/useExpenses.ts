@@ -239,7 +239,14 @@ export function useExportPDF() {
       });
 
       // Transactions table
-      const afterCat = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 140;
+     // Transactions table
+type AutoTableDoc = {
+  lastAutoTable?: {
+    finalY?: number;
+  };
+};
+
+const afterCat = (doc as unknown as AutoTableDoc).lastAutoTable?.finalY ?? 140;
       doc.setFontSize(12);
       doc.text("All Transactions", 15, afterCat + 10);
       autoTable(doc, {
